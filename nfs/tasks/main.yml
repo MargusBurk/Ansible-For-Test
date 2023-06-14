@@ -1,0 +1,49 @@
+- name: Install NFS-UTILS
+  dnf:
+    name: nfs-utils
+    state: latest
+
+- name: Create /shares/
+  file:
+    path: /shares
+    state: directory
+    mode: 0755
+
+- name: Create /shares/nfs
+  file:
+    path: /shares/nfs
+    state: directory
+    mode: 0755
+
+- name: Start the nfs-server
+  service:
+    name: nfs-server
+    state: started
+
+- name: Create the /etc/exports file
+  copy:
+    src: exports
+    dest: /etc/exports
+
+- name: Publish configuration change
+  command: exportfs -a
+    
+- name: Mount an NFS volume
+  ansible.posix.mount:
+    src: "{{ ansible_hostname }}.{{ ansible_domain }}:/shares/nfs"
+    path: /mnt/nfs
+    opts: rw
+    state: mounted
+    fstype: nfs
+
+- name: Open port 111 
+  firewalld:
+    port: 111/tcp
+    permanent: true
+    state: enabled
+
+- name: Open port 2049 
+  firewalld:
+    port: 2049/tcp
+    permanent: true
+    state: enabled

@@ -1,0 +1,71 @@
+- name: Install dovecot
+  dnf:
+    name: dovecot
+    state: latest
+
+- name: Copy dovecots main config file
+  copy:
+    src: dovecot.conf
+    dest: /etc/dovecot/dovecot.conf
+
+- name: Copy dovecot logging.conf
+  copy:
+    src: 10-logging.conf
+    dest: /etc/dovecot/conf.d/10-logging.conf
+
+- name: Copy dovecot auth configuration files
+  copy:
+    src: 10-auth.conf
+    dest: /etc/dovecot/conf.d/10-auth.conf
+
+- name: Copy dovecot mail configuration files
+  copy:
+    src: 10-mail.conf
+    dest: /etc/dovecot/conf.d/10-mail.conf
+
+- name: Copy mailboxes
+  copy:
+    src: 15-mailboxes.conf
+    dest: /etc/dovecot/conf.d/15-mailboxes.conf
+
+- name: Copy dovecot master.conf
+  copy:
+    src: 10-master.conf
+    dest: /etc/dovecot/conf.d/10-master.conf
+
+- name: Add user dovecot permissions to belong to group mail
+  user:
+    name: dovecot
+    groups: mail
+
+- name: Open port 143 tcp 
+  ansible.posix.firewalld:
+    port: "{{ item.port }}/{{ item.proto }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  with_items:
+    - {port: "143", proto: "tcp", "udp"}
+    - {port: "993", proto: "tcp", "udp"}
+
+- name: Edit SSL settings
+  copy: 
+    src: 10-ssl.conf
+    dest: /etc/dovecot/conf.d/10-ssl.conf
+
+- name: Enable TLS
+  copy:
+    src: dovecot.pem
+    dest: /etc/pki/dovecot/certs/dovecot.pem
+
+- name: Enable keys
+  copy:
+    src: "{{ playbook_dir }}/roles/dovecot/files/keys/dovecot.pem.key"
+    dest: /etc/pki/dovecot/private/dovecot.pem
+
+- name: Restart dovecot
+  service:
+    name: dovecot
+    state: restarted
+      
+

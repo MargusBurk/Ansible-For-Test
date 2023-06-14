@@ -1,0 +1,13 @@
+$ORIGIN 90.17.172.in-addr.arpa.   ; Zone starting point in the name-space tree
+                     ; (if skipped - the origin is inferred by the DNS server based on
+                     ; zone declaration in name.conf.local file
+$TTL    15M
+@ IN SOA ns1.{{ ansible_hostname }}.{{ ansible_domain }}. root.{{ ansible_hostname }}.{{ ansible_domain }}. (
+                     2023051103         ; Serial
+                            15M         ; Refresh
+                             5M         ; Retry
+                           120M         ; Expire
+                            600 )       ; Negative Cache TTL
+
+@          IN	   NS	   ns1.
+38         IN	   PTR       {{ ansible_hostname }}.{{ ansible_domain }}.

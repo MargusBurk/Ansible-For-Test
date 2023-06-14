@@ -1,0 +1,34 @@
+#- name: Create object {{ ansible_hostname }}
+#  command: /usr/local/bin/consul kv put object/{{ ansible_hostname|upper }} parool08
+
+- name: Download mc
+  get_url:
+    url: https://dl.min.io/client/mc/release/linux-amd64/mc
+    dest: /home/centos/ansible/tempdir/
+    owner: root
+
+- name: Make mc executable
+  file:
+    path: /home/centos/ansible/tempdir/mc
+    state: touch
+    mode: u+rwx,g+rwx
+
+- name: Set a valid path    
+  shell: export PATH=$PATH:/usr/bin
+  args:
+    chdir: /home/centos/ansible/tempdir/
+
+- name: Move mc to a nice place
+  copy: 
+    src: /home/centos/ansible/tempdir/mc
+    dest: /usr/bin
+    owner: root
+
+- name: Add host scoring
+  command: echo "b71497" | mc config host add scoring https://scoring.{{ ansible_domain }}:9000
+
+# - name: Make bucket {{ ansible_hostname | lower }}
+# command: mc mb scoring/{{ ansible_hostname | lower }}
+
+- name: Create scoring test file
+  command: mc cat scoring/{{ ansible_hostname | lower }}/scoringtestfile

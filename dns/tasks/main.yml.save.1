@@ -1,0 +1,165 @@
+- name: Perform DNF Autoremove
+  dnf:
+    autoremove: yes
+
+- name: Start Firewall if not started
+  service:
+    name: firewalld
+    state: started
+
+- name: Firewall add DNS
+  firewalld:
+    service: dns
+    permanent: true
+    state: enabled
+
+- name: Firewall add UDP for port 8301
+  ansible.posix.firewalld:
+    port: 8301/udp
+    permanent: true
+    state: enabled
+
+- name: Firewall add TCP for port 8301
+  ansible.posix.firewalld:
+    port: 8301/tcp
+    permanent: true
+    state: enabled
+
+- name: Firewall add UDP for port 53
+  ansible.posix.firewalld:
+    port: 53/udp
+    permanent: true
+    state: enabled
+
+- name: Firewall add TCP for port 53
+  ansible.posix.firewalld:
+    port: 53/tcp
+    permanent: true
+    state: enabled
+
+- name: Firewall add UDP for port 80
+  ansible.posix.firewalld:
+    port: 80/udp
+    permanent: true
+    state: enabled
+
+- name: Firewall add TCP for port 80
+  ansible.posix.firewalld:
+    port: 80/tcp
+    permanent: true
+    state: enabled
+
+- name: Firewall add UDP for port 5000
+  ansible.posix.firewalld:
+    port: 5000/udp
+    permanent: true
+    state: enabled
+
+- name: Firewall add TCP for port 5000
+  ansible.posix.firewalld:
+    port: 5000/tcp
+    permanent: true
+    state: enabled
+
+- name: Firewall add UDP for port 25
+  ansible.posix.firewalld:
+    port: 25/udp
+    permanent: true
+    state: enabled
+
+- name: Firewall add TCP for port 25
+  ansible.posix.firewalld:
+    port: 25/tcp
+    permanent: true
+    state: enabled
+
+- name: Firewall add UDP for port 443
+  ansible.posix.firewalld:
+    port: 443/udp
+    permanent: true
+    state: enabled
+
+- name: Firewall add TCP for port 443
+  ansible.posix.firewalld:
+    port: 443/tcp
+    permanent: true
+    state: enabled
+
+- name: Firewall add UDP for port 2049
+  ansible.posix.firewalld:
+    port: 2049/udp
+    permanent: true
+    state: enabled
+
+- name: Firewall add TCP for port 2049
+  ansible.posix.firewalld:
+    port: 2049/tcp
+    permanent: true
+    state: enabled
+
+- name: Firewall add UDP for port 139 
+  ansible.posix.firewalld:
+    port: 139/udp
+    permanent: true
+    state: enabled
+
+- name: Firewall add TCP for port 139
+  ansible.posix.firewalld:
+    port: 139/tcp
+    permanent: true
+    state: enabled
+
+- name: Firewall add UDP for port 465
+  ansible.posix.firewalld:
+    port: 465/udp
+    permanent: true
+    state: enabled
+
+- name: Firewall add TCP for port 465
+  ansible.posix.firewalld:
+    port: 465/tcp
+    permanent: true
+    state: enabled</pre>
+
+
+
+- name: Firewall reload
+  command: firewall-cmd --reload
+
+- name: Disable IPv6
+  copy:
+    src: 70-ipv6.conf
+    dest: /etc/sysctl.d/70-ipv6.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Change net.ipv6.conf.default.disable_ipv6 to 1.
+  sysctl:
+    name: net.ipv6.conf.default.disable_ipv6
+    value: '1'
+    sysctl_file: /etc/sysctl.d/70-ipv6.conf
+    reload: yes
+
+- name: Change net.ipv6.conf.all.disable_ipv6 to 1.
+  sysctl:
+    name: net.ipv6.conf.all.disable_ipv6
+    value: '1'
+    sysctl_file: /etc/sysctl.d/70-ipv6.conf
+    reload: yes
+
+- name: Inserts into hostname
+  template:
+    src: hostname.j2
+    dest: /etc/hostname
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Inserts into hosts
+  template:
+    src: hosts.j2
+    dest: /etc/hosts
+    owner: root
+    group: root
+    mode: '0644'

@@ -1,0 +1,59 @@
+- name: Install samba
+  dnf:
+    name:
+      - samba
+      - samba-common
+      - samba-client
+      - cifs-utils
+
+- name: Create samba export directory
+  file:
+    path: /shares/samba
+    state: directory 
+    owner: root
+    group: samba_group
+    mode: 0755
+
+- name: Do magic
+  command: chcon -t samba_share_t /shares/samba  
+
+- name: Create a group for samba
+  group:
+    name: samba_group
+    state: present
+
+- name: Add scoring to samba 
+  user: 
+    name: "{{item}}"
+    append: true
+    groups: samba_group
+  with_items:
+    - "scoring"
+    - "centos"
+    
+- name: Add samba password for scoring
+  command: echo "2daysuperadmin" | smbpasswd -a scoring 
+
+- name: Add samba password for centos
+  command: echo "qwerty" | smbpasswd -a centos
+
+- name: Copy samba configuration file
+  copy:
+    src: smb.conf
+    dest: /etc/samba/smb.conf
+
+- name: Start and enable samba.service
+  service:
+    name: smb
+    state: started
+    enabled: yes
+
+- name: Enable port 139, 445/tcp
+  ansible.posix.firewalld:
+    port: "{{ item.port }}/tcp"
+    permanent: true
+    state: enabled
+  with_items:
+    - {port: "139", "445"}
+
+

@@ -1,0 +1,26 @@
+- name: Create roundcube file
+  hosts: localhost
+  become: true
+  vars:
+    vm_name: "b71497"  # Replace with your own VM name
+  tasks:
+    - name: Create roundcube file
+      copy:
+        content: |
+          <VirtualHost *:80>
+            ServerAdmin root@{{ vm_name }}.sa.cs.ut.ee
+            ServerName mail.{{ vm_name }}.sa.cs.ut.ee
+            DocumentRoot /var/www/html/roundcubemail
+            <Directory /var/www/html/roundcubemail>
+                AllowOverride all
+            </Directory>
+
+            ErrorLog /var/log/httpd/mail.{{ vm_name }}.sa.cs.ut.ee-error.log
+            CustomLog /var/log/httpd/mail.{{ vm_name }}.sa.cs.ut.ee-access.log combined
+            ForensicLog /var/log/httpd/mail.{{ vm_name }}.sa.cs.ut.ee-forensic.log
+          </VirtualHost>
+
+        dest: "/etc/httpd/conf.d/mail.{{ vm_name }}.sa.cs.ut.ee.conf"
+        owner: apache
+        group: apache
+        mode: '0644'

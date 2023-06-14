@@ -1,0 +1,143 @@
+- name: Install dependencies for WordPress
+  dnf:
+    name:
+      - php-mysqlnd
+      - php-fpm
+      - mariadb-server
+      - httpd
+      - tar 
+      - curl 
+      - php-json
+    state: latest
+
+- name: Start MariaDB
+  service:
+    name: mariadb
+    state: started
+    enabled: yes
+
+- name: Enable httpd, just in case
+  service:
+    name: httpd
+    enabled: yes
+
+- name: Install mysql stuff
+  pip:
+    name: pymysql 
+
+- name: Mysql is up and running
+  service:
+    name: mysql
+    state: started
+    enabled: yes
+
+- name: Set password
+  command: mysqladmin password qwerty
+
+- name: Copy .my.cnf to root home
+  copy:
+    src: .my.cnf
+    dest: /root/.my.cnf
+    owner: root
+
+- name: Set root Password
+  mysql_user: 
+    name: root
+    host: localhost
+    password: qwerty
+    state: present
+
+- name: Set MariaDB root password for 127.0.0.1, ::1, FQDN
+  mysql_user:
+    name: root
+    password: qwerty
+    host: localhost
+    login_user: root
+    login_password: qwerty
+    state: present
+  with_items:
+    - ::1
+    - 127.0.0.1
+    - "{{ ansible_fqdn }}"
+
+- name: Add root .my.cnf
+  template: src=root.my.cnf.j2 dest=/root/.my.cnf owner=root  mode=0600
+#
+- name: Reload privilege tables
+  command: 'mysql -ne "{{ item }}"'
+  with_items:
+    - FLUSH PRIVILEGES
+  changed_when: False
+- name: Remove anonymous users
+  command: 'mysql -ne "{{ item }}"'
+  with_items:
+    - DELETE FROM mysql.user WHERE User=''
+  changed_when: False
+
+- name: Disallow root login remotely
+  command: 'mysql -ne "{{ item }}"'
+  with_items:
+    - DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1')
+  changed_when: False
+
+- name: Remove test database and access to it
+  command: 'mysql -ne "{{ item }}"'
+  with_items:
+    - DROP DATABASE test
+    - DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%'
+  changed_when: False
+  ignore_errors: True
+
+- name: Reload privilege tables
+  command: 'mysql -ne "{{ item }}"'
+  with_items:
+    - FLUSH PRIVILEGES
+  changed_when: False
+
+
+- name: Create a new database with name 'WordPress'
+  community.mysql.mysql_db:
+    name: WordPress
+    state: present
+
+- name: Create database user using password with all database privileges
+  community.mysql.mysql_user:
+    name: admin
+    password: qwerty
+    priv: 'WordPress.*:ALL'
+    state: present
+
+- name: Reload privilege tables
+  command: 'mysql -ne "{{ item }}"'
+  with_items:
+    - FLUSH PRIVILEGES
+  changed_when: False
+
+- name: Download WordPress
+  ansible.builtin.get_url:
+    url: https://wordpress.org/latest.tar.gz
+    dest: /home/centos/wordpress.tar.gz
+    mode: '0440'
+
+- name: Unzip wordpress and place it into /var/www/html
+  unarchive:
+    src: /home/centos/wordpress.tar.gz
+    dest: /var/www/html
+    owner: apache
+    group: apache
+
+- name: Apply SELinux thingy
+  command: chcon -t httpd_sys_rw_content_t /var/www/html/wordpress -R
+
+- name: Change logging locations
+  ansible.builtin.lineinfile:
+    path: /etc/php-fpm.conf
+    regexp: '^error_log ='
+    line: error_log = /var/log/httpd/php-errors.log
+
+- name: Change logging locations
+  ansible.builtin.lineinfile:
+    path: /etc/php-fpm.d/www.conf
+    regexp: '^php_admin_value[error_log] ='
+    line: php_admin_value[error_log] = /var/log/httpd/www-php-errors.log
+

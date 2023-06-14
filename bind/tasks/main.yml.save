@@ -1,0 +1,49 @@
+- name: Install binds
+  dnf:
+    name:
+      - bind
+      - bind-utils
+    state: latest
+
+- name: Make log directory
+  file:
+    path: /var/named/log
+    state: directory
+    owner: root
+    group: named
+    mode: '755'
+
+- name: Add logging files
+  file:
+    path: /var/named/log
+    owner: root
+    group: named
+    mode: '755'
+    state: touch
+  with_items:
+  - log
+  - default
+  - auth_servers
+  - zone_transfers
+  - client_security
+  - queries
+  - query-errors
+
+- name: Add named.conf
+  template:
+    src: named.conf
+    dest: /etc/named.conf
+    owner: named
+    mode: '640'
+
+- name: Start named, if not started
+  ansible.builtin.service:
+    name: named
+    state: started
+
+- name: Enable named
+  ansible.builtin.service:
+    name: named
+    enabled: yes
+
+- name: Add DNS zone(s)

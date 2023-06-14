@@ -1,0 +1,49 @@
+- name: Create proxy virtual host
+  template:
+    src: proxy.b71497.conf
+    dest: /etc/httpd/conf.d/proxy.{{ ansible_hostname }}.conf
+    owner: root
+    mode: '0755'
+
+- name: Install pip
+  dnf:
+    name: python3-pip
+    state: latest 
+
+- name: Install flask
+  pip:
+    name: flask
+
+- name: Seboolean | this equates to 'setsebool -P httpd_can_network_connect=1'
+  seboolean:
+    name: httpd_can_network_connect
+    state: yes
+    persistent: yes
+
+- name: Add "proxy" user
+  user: 
+    name: proxy
+
+- name: Move proxy python to /usr/local/lib/server.py
+  copy:
+    src: website.py
+    dest: /usr/local/lib/server.py
+    owner: proxy
+
+- name: Create proxy service
+  copy:
+    src: proxy.service
+    dest: /etc/systemd/system/proxy.service
+
+- name: Reload Systemd damon
+  systemd:
+    daemon_reload: true
+
+- name: Start proxy
+  service:
+    name: proxy
+    state: started
+    enabled: yes
+
+
+

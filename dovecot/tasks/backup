@@ -1,0 +1,40 @@
+- name: Enable imap in dovecot
+  lineinfile:
+    path: /etc/dovecot/dovecot.conf
+    regexp: '^#protocols = imap pop3 lmtp submission'
+    line: protocols = imap lmtp
+
+- name: Update auth_mechanisms
+  lineinfile:
+    path: /etc/dovecot/conf.d/10-auth.conf
+    regexp: '^auth_mechanisms = plain'
+    line: auth_mechanisms = plain, login
+
+- name: Set auth_username_format
+  lineinfile:
+    path: /etc/dovecot/conf.d/10-auth.conf
+    regexp: '^#auth_username_format ='
+    line: auth_username_format = %n
+
+- name: Change mailbox location
+  lineinfile:
+    path: /etc/dovecot/conf.d/10-mail.conf
+    regexp: '^#mail_location ='
+    line: mail_location = maildir:~/mail
+
+- name: Add dovecot to mail_privileged_group
+  lineinfile:
+    path: /etc/dovecot/conf.d/10-mail.conf
+    regexp: '^#mail_privileged_group ='
+    line: mail_privileged_group = mail
+
+- name: Allow login from unencrypted connectinos
+  lineinfile:
+    path: /etc/dovecot/conf.d/10-auth.conf
+    regexp: '^#disable_plaintext_auth ='
+    line: disable_plaintext_auth = no
+
+- lineinfile:
+    path: /etc/dovecot/conf.d/10-SSL.conf
+    regexp: '^#ssl ='
+    line: ssl = no
