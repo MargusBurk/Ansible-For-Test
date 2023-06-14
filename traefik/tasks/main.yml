@@ -1,0 +1,33 @@
+- name: Create the traefik directory
+  file:
+    path: /etc/traefik
+    state: directory
+    mode: 0755
+
+- name: Copy traefik configuration file
+  copy:
+    src: traefik.toml
+    dest: /etc/traefik
+
+- name: Open ports 50080 and 58080
+  firewalld:
+    port: "{{item.port}}/{{item.proto}}"
+    permanent: true
+    immediate: true
+    state: enabled
+  with_items:
+    - {port: "50080", proto: "tcp"}
+    - {port: "50080", proto: "udp"}
+    - {port: "58080", proto: "tcp"}
+    - {port: "58080", proto: "udp"}
+
+- name: Copy docker-compose.yml to /home/centos/docker-compose
+  template:
+    src: docker-compose.yml
+    dest: /home/centos/docker_compose/
+    owner: root
+    mode: 0755
+
+- name: Run docker compose
+  debug:
+    msg: "docker compose up -d"

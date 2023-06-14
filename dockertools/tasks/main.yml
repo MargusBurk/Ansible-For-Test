@@ -1,0 +1,30 @@
+- name: Add trivy repository to yum
+  yum_repository:
+    name: Trivy repository
+    description: Trivy repository
+    baseurl: https://aquasecurity.github.io/trivy-repo/rpm/releases/$releasever/$basearch/
+    gpgcheck: no
+    enabled: yes
+
+- name: Update repository list
+  command: yum -y update
+
+- name: Install trivy
+  yum:
+    name: trivy
+    state: present
+
+- name: Download
+  get_url:
+    url: https://github.com/wagoodman/dive/releases/download/v0.9.2/dive_0.9.2_linux_amd64.rpm
+    dest: /home/centos/ansible/tempdir/
+    mode: 0755
+
+- name: Install dive
+  yum:
+    name: /home/centos/ansible/tempdir/dive_0.9.2_linux_amd64.rpm
+    state: present
+
+- name: Reminder
+  debug:
+    msg: "Run dive with /usr/local/bin/dive, trivy works without it"

@@ -1,0 +1,200 @@
+
+- name: Install epel-release and dnf-plugins-core
+  dnf:
+    name:
+      - epel-release
+      - dnf-plugins-core
+    state: latest
+
+- name: A command of magic and joy
+  command: dnf config-manager --set-enabled crb
+
+- name: Install "this hurts my fingers to type this out" package
+  dnf:
+    name:
+      - make
+      - ImageMagick
+      - ImageMagick-devel 
+      - ImageMagick-perl 
+      - pcre-devel 
+      - zlib 
+      - zlib-devel 
+      - libzip 
+      - libzip-devel 
+      - libmcrypt-devel 
+      - php 
+      - php-fpm 
+      - php-devel 
+      - php-pear 
+      - php-cli 
+      - php-gd 
+      - php-curl 
+      - php-xml 
+      - php-mysqlnd 
+      - php-mbstring 
+      - php-intl 
+      - php-ldap 
+      - mariadb 
+      - mariadb-server 
+      - httpd
+    state: latest
+
+- name: Install imagick
+  command: pear install imagick
+  with_items: php.pear.modules
+  when: php.pear.modules is defined
+  register: pear_imagick
+  changed_when: "'already installed' not in pear_imagick.stdout"
+  failed_when: "'already installed' not in pear_imagick.stdout and pear_imagick.stderr"
+
+- name: Create extension file for imagick
+  copy:
+    src: 20-imagick.ini
+    dest: /etc/php.d/20-imagick.ini
+
+- name: Install mcrypt
+  command: pear install mcrypt
+  with_items: php.pear.modules
+  when: php.pear.modules is defined
+  register: pear_mcrypt
+  changed_when: "'already installed' not in pear_mcrypt.stdout"
+  failed_when: "'already installed' not in pear_mcrypt.stdout and pear_mcrypt.stderr"
+
+- name: Create extension file for mcrypt
+  copy:
+    src: 20-mcrypt.ini
+    dest: /etc/php.d/20-mcrypt.ini
+    
+- name: Install zip
+  command: pear install zip
+  with_items: php.pear.modules
+  when: php.pear.modules is defined
+  register: pear_zip
+  changed_when: "'already installed' not in pear_zip.stdout"
+  failed_when: "'already installed' not in pear_zip.stdout and pear_zip.stderr"
+
+- name: Create extension file for zip
+  copy:
+    src: 20-zip.ini
+    dest: /etc/php.d/20-zip.ini
+
+- name: Copy php.ini conf file
+  copy:
+    src: php.ini
+    dest: /etc/php.ini
+
+- name: Make sure httpd is started and enabled
+  service:
+    name: httpd
+    state: started
+    enabled: yes
+
+- name: Make sure mariadb is started and enabled
+  service:
+    name: mariadb
+    state: started
+    enabled: yes
+
+- name: Make sure php-fpm is started and enabled
+  service:
+    name: php-fpm
+    state: started
+    enabled: yes
+
+- name: Create a new database with name 'roundcubemail'
+  community.mysql.mysql_db:
+    name: roundcubemail
+    state: present
+
+- name: Create a random password for roundcube user
+  command: openssl rand -base64 16
+  register: round_pass
+
+- name: Write to file
+  ansible.builtin.copy:
+    content: "{{ round_pass.stdout }}"
+    dest: "/root/round_pass"
+
+- name: Create the roundcube user
+  community.mysql.mysql_user:
+    name: roundcube
+    host: localhost
+    password: '{{ round_pass }}'
+    priv: 'roundcubemail.*:ALL'
+    state: present 
+
+- name: Create the roundcube user
+  community.mysql.mysql_user:
+    name: roundcube
+    host: localhost
+    password: qwerty
+    priv: 'roundcubemail.*:ALL'
+    state: present
+
+- name: Reload privilege tables
+  command: 'mysql -ne "{{ item }}"'
+  with_items:
+    - FLUSH PRIVILEGES
+  changed_when: False
+
+- name: Add logging files
+  file:
+    path: /var/log/httpd
+    owner: root
+    group: named
+    mode: '755'
+    state: touch
+  with_items:
+  - mail.{{ ansible_hostname}}.{{ ansible_domain }}-error.log
+  - mail.{{ ansible_hostname }}.{{ ansible_domain }}-access.log
+  - mail.{{ ansible_hostname }}.{{ ansible_domain }}-forensic.log
+
+- name: Download Roundcube
+  ansible.builtin.get_url:
+    url: https://github.com/roundcube/roundcubemail/releases/download/1.6.1/roundcubemail-1.6.1-complete.tar.gz
+    dest: /home/centos/ansible/tempdir/roundsphere.tar.gz
+    mode: '0740'
+
+- name: Unzip roundcube
+  unarchive:
+     src: /home/centos/ansible/tempdir/roundsphere.tar.gz
+     dest: /var/www/html/
+
+- name: Remove existing roundcubemail directory
+  ansible.builtin.file:
+    path: /var/www/html/roundcubemail
+    state: absent
+
+- name: Move roundcubemail directory
+  ansible.builtin.command:
+    cmd: mv /var/www/html/roundcubemail-1.6.1 /var/www/html/roundcubemail
+
+- name: Remove old roundcube
+  file:
+    path: /var/www/html/roundcubemail-1.6.1
+    state: absent
+
+- name: Give correct permissions to roundcubes folder
+  command: chgrp apache /var/www/html/roundcubemail
+
+- name: Change roundcube permissions
+  command: chmod -R 755 /var/www/html/roundcubemail
+
+- name: Change group to apache
+  command: chown apache /var/www/html/roundcubemail
+
+- name: Remove roundcube download files
+  file:
+    path: /home/centos/ansible/tempdir/roundsphere.tar.gz
+    state: absent
+
+- name: Load roundcube main config file
+  template:
+    src: config.inc.php
+    dest: /var/www/html/roundcubemail/config/config.inc.php
+    owner: apache
+    group: apache
+    mode: 750
+
+- name: Set selinux permissions for roundcubemail
+  command: chcon -t httpd_sys_rw_content_t /var/www/html/roundcubemail -R 

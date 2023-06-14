@@ -1,0 +1,3 @@
+- name: Add user scoring as Linux user
+  user:
+    name: scoring

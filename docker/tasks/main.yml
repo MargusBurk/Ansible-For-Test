@@ -1,0 +1,89 @@
+- name: Create Docker directory
+  file:
+    path: /etc/docker
+    state: directory
+    mode: 0755
+
+- name: Create docker config file
+  copy:
+    src: daemon.json
+    dest: /etc/docker/daemon.json
+
+- name: Uninstall old versions of docker
+  yum: 
+    name:
+      - docker
+      - docker-client
+      - docker-client-latest
+      - docker-common
+      - docker-latest
+      - docker-latest-logrotate
+      - docker-logrotate
+      - docker-engine
+    state: absent
+
+- name: Install yum-utils
+  yum:
+    name: yum-utils
+    state: present
+
+- name: Add signing key
+  rpm_key:
+    key: "https://download.docker.com/linux/centos/gpg"
+    state: present
+
+- name: Add docker repository
+  yum_repository:
+    name: docker
+    description: Docker stuff repo
+    baseurl: "https://download.docker.com/linux/centos/9/x86_64/stable"
+    enabled: true
+    gpgcheck: true
+    gpgkey: "https://download.docker.com/linux/centos/gpg"
+
+- name: Install docker
+  yum:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+
+- name: Start docker
+  service:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Change the default registery
+  command: docker run registry.hpc.ut.ee/mirror/library/centos
+
+- name: Create flask app directory
+  file:
+    path: /etc/docker_lab
+    state: directory
+    mode: 0755
+
+- name: Open port 5005/tcp
+  firewalld:
+    port: 5005/tcp
+    permanent: true
+    state: enabled
+
+- name: Copy server.py into docker_lab
+  copy:
+    src: server.py
+    dest: /etc/docker_lab
+    mode: 0755
+
+- name: Copy dockerfile into docker_lab
+  copy:
+    src: Dockerfile 
+    dest: /etc/docker_lab
+
+#- name: Copy the virtualhost file (EDIT IT)
+#  copy:
+#    src: container-proxy.b71497.sa.cs.ut.ee.conf 
+#    dest: /etc/httpd/conf.d/container-proxy.{{ ansible_hostname }}.{{ ansible_domain }}.conf

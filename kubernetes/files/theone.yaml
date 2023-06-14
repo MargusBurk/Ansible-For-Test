@@ -1,0 +1,220 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab11
+  labels:
+    name: lab11
+---
+
+---
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: firstdeploy
+  namespace: lab11
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: firstdeploy
+  template:
+    metadata:
+      labels:
+        app: firstdeploy
+    spec:
+      containers:
+      - image: registry.hpc.ut.ee/sysadmincourse-dev/hello-world:1.0
+        imagePullPolicy: Never
+        name: hello-world
+        ports:
+        - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-service
+  namespace: lab11
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 5000
+    protocol: TCP
+  selector:
+    app: firstdeploy
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress1
+  namespace: lab11
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  defaultBackend:
+    service:
+      name: hello-service
+      port:
+        number: 80
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: resource-mgt
+  labels:
+    name: resource-mgt
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vols
+  labels:
+    name: vols
+---
+apiVersion: v1
+kind: Pod
+metadata:
+    name: bucket
+    namespace: vols
+spec:
+    containers:
+    - name: nginx
+      image: nginx
+      env:
+      - name: ilike
+        valueFrom:
+          configMapKeyRef:
+            name: veggies
+            key: favourite
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: laptop
+    namespace: vols
+data:
+    laptop.brand: HP
+    laptop.module: '840'
+    laptop.gen: G8
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: laptop
+  namespace: vols
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    volumeMounts:
+    - name: laptop-vol
+      mountPath: /laptop
+  volumes:
+  - name: laptop-vol
+    configMap:
+      name: laptop
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: resource-mgt
+  labels:
+    name: resource-mgt
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: glutton
+  namespace: resource-mgt
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: glutton
+  template:
+    metadata:
+      labels:
+        app: glutton
+    spec:
+      containers:
+      - image: vish/stress
+        imagePullPolicy: Always
+        name: stress
+        resources:
+          requests:
+            memory: "20Mi"
+            cpu: "10m"
+          limits:
+            memory: "70Mi"
+            cpu: "20m"
+        args:
+        - -cpus
+        - "2"
+        - -mem-total
+        - "70Mi"
+        - -mem-alloc-size
+        - "60Mi"
+        - -mem-alloc-sleep
+        - "1s"
+              
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pvol-lab11
+spec:
+  capacity:
+    storage: 200Mi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nfs
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /shares/k8s
+    server: B71497.sa.cs.ut.ee
+    readOnly: false
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-lab11
+  namespace: vols
+spec:
+  accessModes:
+  - ReadWriteOnce
+  volumeName: pvol-lab11
+  storageClassName: nfs
+  resources:
+    requests:
+      storage: 200Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: writecon
+  namespace: vols
+  labels:
+    name: writecon
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pod-that-writes
+  template:
+    metadata:
+      labels:
+        app: pod-that-writes
+    spec:
+      containers:
+      - image: registry.hpc.ut.ee/sysadmincourse-dev/container_that_writes:1.0
+        name: pod-that-writes
+        volumeMounts:
+        - name: nfs-vol
+          mountPath: "/opt/k8s"
+      volumes:
+      - name: nfs-vol
+        persistentVolumeClaim:
+          claimName: pvc-lab11
+

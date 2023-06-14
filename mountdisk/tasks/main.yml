@@ -1,0 +1,45 @@
+- name: Create shares dir
+  file:
+    path: /shares
+    state: directory
+    mode: 0755
+
+- name: Create k8s dir in shares
+  file:
+    path: /shares/k8s
+    state: directory
+    mode: 0755
+
+- name: Create k8s in mnt
+  file:
+    path: /mnt/k8s
+    state: directory
+    mode: 0755
+
+- name: Create mount directory
+  file:
+    path: /lab8/fs-ext4
+    state: directory
+    mode: 0755
+
+- name: Create mount directory
+  file:
+    path: /lab8/fs-xfs
+    state: directory
+    mode: 0755
+
+- name: Mount ext4 partition
+  ansible.posix.mount:
+    path: /lab8/fx-ext4
+    src: LABEL="lab8FSext4"
+    fstype: ext4
+    state: present
+
+- name: Mount disks
+  ansible.posix.mount:
+    path: /lab8/fx-xfs
+    src: LABEL="lab8FSxfs"
+    fstype: xfs
+    state: present
+
+

@@ -1,0 +1,63 @@
+- name: Open ports 514, 30910, 30909, 30000, 30310
+  firewalld:
+    port: "{{ item.port }}/{{ item.proto }}"
+    permanent: true
+    state: enabled
+  with_items:
+    - { port: "514", proto: "tcp","udp" }
+    - { port: "30910", proto: "tcp","udp" }
+    - { port: "30909", proto: "tcp","udp" }
+    - { port: "30000", proto: "tcp","udp" }
+    - { port: "30310", proto: "tcp","udp" }
+
+- name: Copy rsyslog.conf
+  copy:
+    src: rsyslog.conf
+    dest: /etc/rsyslog.conf
+
+- name: Copy incoming log template
+  copy: 
+    src: 01-receiving.conf
+    dest: /etc/rsyslog.d/01-receiving.conf
+
+- name: Restart rsyslog
+  service:
+    name: rsyslog
+    state: restarted
+
+- name: Apply node-exporter daemonset
+  shell: 
+    cmd: kubectl apply -f node-exporter.yaml
+    chdir: "{{ playbook_dir }}/roles/monitoring/files/"
+
+- name: Apply prometheus configmap
+  shell:
+    cmd: kubectl apply -f prometheus.yaml
+    chdir: "{{ playbook_dir }}/roles/monitoring/files/"
+
+- name: Apply grafana Deployment
+  shell:
+    cmd: kubectl apply -f grafana.yaml
+    chdir: "{{ playbook_dir }}/roles/monitoring/files/"
+
+- name: Reminder
+  debug:
+    msg: "Add Prometheus data source to grafana and import a dashboard to it. ID 1860. <service_name>.<namespace>.svc:<container_port>"
+
+- name: Apply loki generic_fancy_word
+  shell:
+    cmd: kubectl apply -f loki.yaml
+    chdir: "{{ playbook_dir }}/roles/monitoring/files/"
+
+- name: Wait for 1 min
+  pause:
+    minutes: 1
+    prompt: "According to all known laws of aviation, there is no way that a bee should be able to fly. Its wings are too small to get its fat little body off the ground. The bee, of course, flies anyway because bees don't care what humans think is impossible."
+- name: Make promtail happen
+  shell:
+    cmd: kubectl apply -f promtail.yaml
+    chdir: "{{ playbook_dir }}/roles/monitoring/files/"
+
+- name: Reminder 2
+  debug:
+    msg: "Add loki datasource and dashboard. ID 13639. <service_name>.<namespace>.svc:<container_port>"

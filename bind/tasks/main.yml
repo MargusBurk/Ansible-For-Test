@@ -1,0 +1,74 @@
+- name: Install binds
+  dnf:
+    name:
+      - bind
+      - bind-utils
+      - httpd
+      - postfix
+      - alpine
+    state: latest
+
+- name: Make log directory
+  file:
+    path: /var/named/log
+    state: directory
+    owner: root
+    group: named
+    mode: 777
+
+- name: Make in log directory default file
+  file:
+    path: /var/named/log/default
+    state: touch
+    owner: root
+    group: named
+    mode: 777
+
+- name: Add logging files
+  file:
+    path: /var/named/log
+    owner: root
+    group: named
+    mode: 777
+    state: touch
+  with_items:
+  - log
+  - default
+  - auth_servers
+  - zone_transfers
+  - client_security
+  - queries
+  - query-errors
+
+- name: Add named.conf
+  template:
+    src: named.conf
+    dest: /etc/named.conf
+    owner: named
+    mode: 777
+
+- name: Start named, if not started
+  ansible.builtin.service:
+    name: named
+    state: started
+    enabled: yes
+
+- name: Add zone files
+  template:
+    src: b71497.sa.cs.ut.ee
+    dest: /etc/named/{{ ansible_hostname }}.{{ ansible_domain }}
+    owner: root
+    group: named
+    mode: 0640
+
+- name: Add reverse zone files
+  template:
+    src: reverse.b71497.sa.cs.ut.ee
+    dest: /etc/named/reverse.{{ ansible_hostname }}.{{ ansible_domain }}
+    owner: root
+    group: named
+    mode: 0640
+
+- name: Change in-addr.arpa
+  debug:
+    msg: "Change me to the ip in exam"

@@ -1,0 +1,20 @@
+version: "3.3"
+
+services:
+
+  traefik:
+    image: "traefik:v2.1.8"
+    container_name: "traefik"
+    ports:
+      - "50080:80"
+      - "58080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "/etc/traefik/traefik.toml:/traefik.toml:ro"
+  whoami:
+    image: "registry.hpc.ut.ee/mirror/containous/whoami"
+    container_name: "whoami-traefik"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami-traefik.rule=Host(`{{ ansible_hostname }}.{{ ansible_domain }}`)"
+      - "traefik.http.routers.whoami-traefik.entrypoints=web"

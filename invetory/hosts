@@ -1,0 +1,21 @@
+#[group1]
+
+#<ip> # OR
+#<hostname>
+
+#[group2]
+
+#google.com
+#8.8.8.8
+
+[B71497]
+
+172.17.90.38
+
+[vm]
+
+172.17.90.38
+
+[test]
+
+localhost

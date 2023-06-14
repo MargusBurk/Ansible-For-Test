@@ -1,0 +1,111 @@
+- name: install pre-requisites
+  pip:
+    name:
+      - openshift
+      - pyyaml
+      - kubernetes 
+
+- name: Create traefik config
+  copy:
+    src: traefik-config.yaml
+    dest: /var/lib/rancher/k3s/server/manifests/
+
+- name: Install k3s
+  shell: 
+    cmd: curl -sfL https://get.k3s.io | sh -
+
+- name: Create a symbolic link
+  ansible.builtin.file:
+    src: /usr/local/bin/kubectl
+    dest: kubectl
+    owner: root
+    group: root
+    state: link
+
+- name: Open ports 6443 and 10250 tcp
+  firewalld:
+    port: "{{item.port}}/{{item.proto}}"
+    permanent: true
+    immediate: true
+    state: enabled
+  with_items:
+    - {port: "6443","10250", proto: "tcp"}
+
+- name: Create kubernetes folder in ansible folder
+  file:
+    path: /home/centos/kubernetes
+    state: directory
+    mode: '0755'
+
+- name: Become vegitarian
+  file:
+    path: /home/centos/kubernetes/fruit
+    state: directory
+    mode: '0755'
+
+- name: Create necessary vegetables for a healthy diet
+  copy:
+    src: '{{ item }}'
+    dest: /home/centos/kubernetes/fruit
+  loop:
+    - apple
+    - pear
+    - banana
+    - melon
+
+- name: Create the favorite tomato
+  copy:
+    src: favourite
+    dest: /home/centos/kubernetes/favorite
+
+- name: Create configmap veggies
+  debug:
+    msg: kubectl create configmap veggies --from-literal=text=cucumber --from-file=./favourite --from-file=./fruit -n vols
+
+- name: Create the configmap
+  pause:
+    echo: true
+
+- name: Copy in place THE HOLY SCRIPTURES
+  copy:
+    src: theone.yaml
+    dest: /home/centos/kubernetes
+
+- name: Create the directory /shares/k8s/
+  file:
+    path: /shares/k8s
+    state: directory
+    mode: '0755'
+
+- name: Create the /mnt/k8s/
+  file:
+    path: /mnt/k8s
+    state: directory
+    mode: '0755'
+
+- name: Edit nfs exports
+  copy: 
+    src: exports
+    dest: /etc/exports
+
+- name: Exportfs -a
+  command: exportfs -a 
+
+- name: A reminder
+  debug:
+    msg: 
+    - "Run this using kubectl apply -f theone.yaml"
+    - "Check deployments and running pods, use describe to figure it out"
+
+- name: BRING IN THE HOLY YAML FILE
+  shell: 
+    cmd: kubectl apply -f theone.yaml
+    chdir: "{{ playbook_dir }}/roles/kubernetes/files"
+
+  
+
+
+
+
+
+
