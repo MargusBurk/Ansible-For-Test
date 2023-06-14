@@ -1,0 +1,11 @@
+- name: Install Filesystems
+  hosts: localhost
+  become: true
+  tasks:
+    - name: Install ext4 filesystem
+      command: mkfs.ext4 -F -L "lab8FSext4" /dev/sdb5
+      changed_when: false
+
+    - name: Install xfs filesystem
+      command: mkfs.xfs -f -L "lab8FSxfs" /dev/sdb6
+      changed_when: false

@@ -1,0 +1,61 @@
+- name: Partition and Install Filesystems
+  hosts: localhost
+  become: true
+  tasks:
+    - name: Run parted command
+      command: parted -s /dev/sdb mklabel msdos
+      args:
+        creates: "/dev/sdb1"
+
+    - name: Create Extended Partition
+      command: parted -s /dev/sdb mkpart extended 2048s 100%
+      args:
+        creates: "/dev/sdb5"
+
+    - name: Create Logical Partition 1
+      command: parted -s /dev/sdb mkpart logical ext4 4096s 510M
+      args:
+        creates: "/dev/sdb5"
+
+    - name: Create Logical Partition 2
+      command: parted -s /dev/sdb mkpart logical xfs 1050624s 100%
+      args:
+        creates: "/dev/sdb6"
+
+    - name: Unmount partition if already mounted
+      command: umount -l /lab8/fs-xfs
+      when: "'/lab8/fs-xfs' in ansible_mounts | map(attribute='mount') | list"
+
+    - name: Unmount partition if already mounted
+      command: umount -l /lab8/fs-ext4
+      when: "'/lab8/fs-ext4' in ansible_mounts | map(attribute='mount') | list"
+
+    - name: Install ext4 filesystem
+      command: mkfs.ext4 -L "lab8FSext4" /dev/sdb5
+      args:
+        creates: "/lab8FSext4"
+
+    - name: Install xfs filesystem
+      command: mkfs.xfs -L "lab8FSxfs" -f /dev/sdb6
+      args:
+        creates: "/lab8FSxfs"
+
+    - name: Create mount directories
+      file:
+        path: "/lab8/fs-ext4"
+        state: directory
+
+    - name: Create mount directories
+      file:
+        path: "/lab8/fs-xfs"
+        state: directory
+
+    - name: Add entry to /etc/fstab for ext4 partition
+      lineinfile:
+        path: /etc/fstab
+        line: "LABEL=lab8FSext4 /lab8/fs-ext4 ext4 defaults 0 0"
+
+    - name: Add entry to /etc/fstab for xfs partition
+      lineinfile:
+        path: /etc/fstab
+        line: "LABEL=lab8FSxfs /lab8/fs-xfs xfs defaults 0 0"

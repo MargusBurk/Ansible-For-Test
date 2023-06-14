@@ -1,0 +1,14 @@
+---
+- name: Install BIND9
+  hosts: localhost
+  become: true
+
+  tasks:
+    - name: Update yum cache
+      command:
+        cmd: yum check-update
+
+    - name: Install BIND9 package
+      yum:
+        name: bind
+        state: present

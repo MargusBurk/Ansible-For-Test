@@ -1,0 +1,11 @@
+- name: Create samba export directory
+  hosts: localhost
+  become: true
+  tasks:
+    - name: Create samba export directory
+      file:
+        path: /data/samba
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"

@@ -1,0 +1,35 @@
+- name: Create named zone file
+  hosts: localhost
+  become: true
+  vars:
+    vm_name: "b71497"  # Replace with your own VM name
+  tasks:
+    - name: Create zone file
+      copy:
+        content: |
+          ;
+          ; BIND data file for local zone {{ vm_name }}.{{ ansible_domain }}.;
+          $TTL    15M
+          @       IN      SOA     ns1.{{ vm_name }}.{{ ansible_domain }}. root.{{ vm_name }}.{{ ansible_domain }}. (
+                             2023052316         ; Serial
+                                    15M         ; Refresh
+                                     5M         ; Retry
+                                   120M         ; Expire
+                                    600 )       ; Negative Cache TTL
+          @              IN      NS      ns1
+          @              IN      A       172.17.90.38
+          ns1            IN      A       172.17.90.38
+          {{ vm_name }}         IN      A       172.17.90.38
+          mail.{{ vm_name }}.{{ ansible_domain }}. IN A  172.17.90.38
+          {{ vm_name }}.{{ ansible_domain }} IN MX 10 mail.{{ vm_name }}.{{ ansible_domain }}.
+          www            IN      CNAME   {{ vm_name }}.{{ ansible_domain }}.
+          proxy          IN      CNAME   {{ vm_name }}.{{ ansible_domain }}.
+          wordpress      IN      CNAME   {{ vm_name }}.{{ ansible_domain }}.
+
+
+
+        dest: "/etc/named/{{ vm_name }}.{{ ansible_domain }}"
+        owner: root
+        group: named
+        mode: '0640'
+        force: yes

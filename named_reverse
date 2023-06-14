@@ -1,0 +1,25 @@
+- name: Create reverse mapping Zone file
+  hosts: localhost
+  become: true
+  vars:
+    ip_address: "172.17.90.38"
+    vm_name: "b71497"  # Replace with your own VM name
+  tasks:
+    - name: Create reverse mapping Zone file
+      copy:
+        content: |
+          $ORIGIN 90.17.172.in-addr.arpa.   ; Zone starting point in the name-space tree
+          $TTL    15M
+          @       IN      SOA     ns1.{{ vm_name }}.{{ ansible_domain }}. root.{{ vm_name }}.{{ ansible_domain }}. (
+                             2023052317         ; Serial
+                                    15M         ; Refresh
+                                     5M         ; Retry
+                                   120M         ; Expire
+                                    600 )       ; Negative Cache TTL
+          @       IN      NS      ns1.{{ vm_name }}.{{ ansible_domain }}.
+          38      IN      PTR     ns1.{{ vm_name }}.{{ ansible_domain }}.
+        dest: "/etc/named/reverse.{{ vm_name }}.{{ ansible_domain }}"
+        owner: root
+        group: named
+        mode: '0640'
+        force: yes

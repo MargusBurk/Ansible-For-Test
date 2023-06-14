@@ -1,0 +1,30 @@
+- name: Install mod_security package
+  hosts: localhost
+  become: true
+  tasks:
+    - name: Install mod_security package
+      yum:
+        name: mod_security.x86_64
+        state: present
+- name: Create modsecurity_localrules.conf file
+  hosts: localhost
+  become: true
+  vars:
+  tasks:
+    - name: Install mod_security package
+      yum:
+        name: mod_security
+        state: present
+
+    - name: Create modsecurity_localrules.conf file
+      template:
+        src: roles/apache/templates/modsecurity_localrules.conf.j2
+        dest: /etc/httpd/modsecurity.d/local_rules/modsecurity_localrules.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Restart Apache service
+      service:
+        name: httpd
+        state: restarted

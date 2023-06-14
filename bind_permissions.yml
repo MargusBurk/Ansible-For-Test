@@ -1,0 +1,61 @@
+---
+- name: Set permissions for BIND DNS server
+  hosts: localhost
+  become: true
+
+  tasks:
+    - name: Create directory /var/named/log
+      file:
+        path: /var/named/log
+        state: directory
+        owner: root
+        group: named
+        mode: '0755'
+
+    - name: Create file default
+      file:
+        path: /var/named/log/default
+        state: touch
+        owner: root
+        group: named
+        mode: '0744'
+
+    - name: Create file auth_servers
+      file:
+        path: /var/named/log/auth_servers
+        state: touch
+        owner: root
+        group: named
+        mode: '0744'
+
+    - name: Create file zone_transfers
+      file:
+        path: /var/named/log/zone_transfers
+        state: touch
+        owner: root
+        group: named
+        mode: '0744'
+
+    - name: Create file client_security
+      file:
+        path: /var/named/log/client_security
+        state: touch
+        owner: root
+        group: named
+        mode: '0744'
+
+    - name: Create file queries
+      file:
+        path: /var/named/log/queries
+        state: touch
+        owner: root
+        group: named
+        mode: '0744'
+
+    - name: Create file query-errors
+      file:
+        path: /var/named/log/query-errors
+        state: touch
+        owner: root
+        group: named
+        mode: '0744'

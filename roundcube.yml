@@ -1,0 +1,32 @@
+- name: Roundcube Installation
+  hosts: localhost
+  become: true
+  vars:
+    round_pass: "qwerty"
+
+  tasks:
+    - name: Generate a random password for roundcube user
+      command: openssl rand -base64 16
+      register: round_pass_result
+      changed_when: false
+
+    - name: Set the value of round_pass variable
+      set_fact:
+        round_pass: "{{ round_pass_result.stdout }}"
+
+    - name: Create the roundcube user
+      community.mysql.mysql_user:
+        name: roundcube
+        password: "{{ round_pass }}"
+        priv: "*.*:USAGE"
+        state: present
+        host: localhost
+
+    - name: Copy Roundcube files
+      copy:
+        src: /home/centos/ansible/roles/roundcube/
+        dest: /var/www/html/roundcube/
+        owner: apache
+        group: apache
+        mode: '0644'
+        remote_src: yes

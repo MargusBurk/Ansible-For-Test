@@ -1,0 +1,234 @@
+---
+- hosts: localhost
+  connection: local 
+  user: centos
+  become: true
+  vars:
+    hostname: b71497
+    domain_name: sa.cs.ut.ee
+    ansible_python_interpreter: /usr/bin/python
+
+  roles:
+#    - { role: etais, tags: ["etais"] } 
+#    - { role: dns, tags: ["dns"] }
+#    - { role: bind, tags: ["bind"] }
+#    - { role: proxy, tags: ["proxy"] }
+    - { role: apache, tags: ["apache"] }
+#    - { role: wordpress, tags: ["wordpress"] }
+#    - { role: postfix, tags: ["postfix"] }
+#    - { role: dovecot, tags: ["dovecot"] }
+#    - { role: roundcube, tags: ["roundcube"] }
+#    - { role: mountdisk, tags: ["mountdisk"] }
+#    - { role: nfs, tags: ["nfs"] }
+#    - { role: samba, tags: ["samba"] }
+#    - { role: object, tags: ["object"] }
+#    - { role: docker, tags: ["docker"] }
+#    - { role: dockertools, tags: ["dockertools"] }
+#    - { role: traefik, tags: ["traefik"] }
+ #   - { role: kubernetes, tags: ["kubernetes"] }
+#    - { role: monitoring, tags: ["monitoring"] }
+
+    # Other tasks and roles can be included here
+
+  tasks:
+    - name: Include Roundcube Installation role
+      include_role:
+        name: roundcube
+
+    - name: Copy Roundcube configuration template
+      template:
+        src: /home/centos/ansible/roles/roundcube/templates/config.inc.php
+        dest: /var/www/html/roundcubemail/temp/config.inc.php
+        owner: apache
+        group: apache
+        mode: '0777'
+        force: yes
+    # Other tasks and roles can be included here
+
+    - name: Pause to get some sensitive input
+      ansible.builtin.pause:
+        prompt: "Enter a secret"
+        echo: no
+
+  
+
+  tasks:
+    - name: Install sl package
+      dnf:
+        name: sl
+        state: present
+
+    - name: Testing this out
+      debug:
+        msg: "Hello from user {{ ansible_user_id }} on server {{ ansible_domain }}!"
+
+    - name: Get OpenStack metadata
+      uri:
+        url: http://169.254.169.254/latest/meta-data/public-ipv4
+        method: GET
+        status_code: 200
+        return_content: yes
+      register: cloud_metadata
+
+    - name: Print IP address
+      debug:
+        var: cloud_metadata.content
+
+    - name: Install bind and bind-utils packages
+      dnf:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - bind
+        - bind-utils
+
+    - name: Install httpd
+      dnf:
+        name: httpd
+        state: present
+
+    - name: Install python3-pip
+      dnf:
+        name: python3-pip
+        state: present
+
+    - name: Install required packages
+      dnf:
+        name:
+          - php-mysqlnd
+          - php-fpm
+          - mariadb-server
+          - httpd
+          - tar
+          - curl
+          - php-json
+        state: present
+
+
+    - name: Install Flask libraries
+      pip:
+        name:
+          - flask
+          - flask-restful
+          - flask_sqlalchemy
+        state: present
+        executable: pip3
+
+    - name: Install postfix and telnet
+      dnf:
+        name:
+          - postfix
+          - telnet
+        state: present
+
+    - name: Create destination directory for WordPress
+      file:
+        path: /var/www/html/wordpress
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+        force: yes
+
+    - name: Download WordPress
+      get_url:
+        url: https://wordpress.org/latest.tar.gz
+        dest: /tmp/wordpress.tar.gz
+
+    - name: Unzip WordPress and place it into /var/www/html
+      unarchive:
+        src: /tmp/wordpress.tar.gz
+        dest: /var/www/html
+        owner: root
+        group: root
+        mode: 0755
+
+    - name: Set ownership and permissions for WordPress files
+      file:
+        path: /var/www/html/wordpress
+        owner: root
+        group: root
+        mode: 0755
+
+    - name: Create WordPress configuration file
+      copy:
+        src: /var/www/html/wordpress/wp-config-sample.php
+        dest: /var/www/html/wordpress/wp-config.php
+        owner: root
+        group: root
+        mode: 0644
+        force: yes
+
+    - name: Replace placeholder values in WordPress configuration file
+      replace:
+        path: /var/www/html/wordpress/wp-config.php
+        regexp: "{{ item.regexp }}"
+        replace: "{{ item.replace }}"
+      loop:
+        - { regexp: "WordPress", replace: "WordPress" }
+        - { regexp: "margus", replace: "wordpress_user" }
+        - { regexp: "qwerty", replace: "password" }
+        - { regexp: "localhost", replace: "localhost" }
+
+    - name: Reload privilege tables
+      mysql_db:
+        name: WordPress
+        state: present
+
+#    - name: Roundcube
+#      hosts: localhost
+#      become: true
+
+#      tasks:
+#        - name: Copy Roundcube configuration template
+#          template:
+#            src: /home/centos/ansible/roles/roundcube/templates/config.inc.php
+#            dest: /home/centos/ansible/roles/roundcube/templates/config.inc.php
+#            owner: apache
+#            group: apache
+#            mode: '0644'
+
+#        - name: Copy the virtualhost file
+#          copy:
+#            src: /home/centos/ansible/roles/roundcube/tasks/virtualhost.conf.j2
+#            dest: /etc/httpd/conf.d/mail.b71497.{{ ansible_hostname }}.conf
+#            owner: apache
+#            group: apache
+#            mode: 0644
+
+
+#    - name: Remove existing file or directory inside /var/www/html/roundcubemail
+#      file:
+#        path: /var/www/html/roundcubemail
+#        state: absent
+
+    - name: Move roundcubemail directory
+      command: mv /var/www/html/roundcubemail-1.6.1 /var/www/html/roundcubemail
+      args:
+        creates: /var/www/html/roundcubemail
+
+    - name: Copy the virtualhost file
+      copy:
+        src: /home/centos/ansible/roles/docker/files/reverse-proxy.conf
+        dest: /etc/httpd/conf.d/container-proxy.conf
+        owner: root
+        group: root
+        mode: 0644
+
+
+
+    - name: Patch PersistentVolume
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: PersistentVolume
+        name: pvol-lab11
+        namespace: vols
+        patch:
+          spec:
+            nfs:
+              server: B71497.{{ ansible_domain }}
+      register: patch_result
+
+    - name: Check patch status
+      debug:
+        var: patch_result
